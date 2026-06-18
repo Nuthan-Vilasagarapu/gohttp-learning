@@ -2,6 +2,8 @@ package main
 
 import (
 	"net/http"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -65,6 +67,33 @@ func main() {
 		})
 	})
 
+	router.PUT("/:id", func(ctx *gin.Context) {
+		task_id := ctx.Params.ByName("id")
+		task_body := ctx.Request.FormValue("task")
+		status_body := ctx.Request.FormValue("status")
+
+		for i, todo := range todos {
+			if todo.Id == task_id {
+				if task_body != "" {
+					todo.Task = task_body
+				}
+				if status_body != "" && (status_body == "todo" || status_body == "done") {
+					todo.Status = status_body
+				}
+				todo.UpdatedAt = time.Now()
+				todos[i] = todo
+				ctx.JSON(200, gin.H{
+					"message": "Task updated successfully",
+					"tasks":   todos,
+				})
+				return
+			}
+		}
+		ctx.JSON(http.StatusNotFound, gin.H{
+			"message": "Task not Found",
+		})
+	})
+
 	router.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
 			"todos": todos,
@@ -89,6 +118,49 @@ func main() {
 			ctx.JSON(http.StatusFound, gin.H{
 				"message": "Task Found",
 				"todo":    todoItem,
+			})
+		}
+	})
+
+	router.GET("/todos/search", func(ctx *gin.Context) {
+		task := ctx.Query("task")
+		var todoItems []ITodo
+
+		for _, todo := range todos {
+			if strings.Contains(todo.Task, task) {
+				todoItems = append(todoItems, todo)
+			}
+		}
+		if len(todoItems) == 0 {
+			ctx.JSON(http.StatusNotFound, gin.H{
+				"message": "Task not Found",
+			})
+		} else {
+			ctx.JSON(http.StatusFound, gin.H{
+				"message": "Task Found",
+				"todo":    todoItems,
+			})
+		}
+	})
+
+	router.DELETE("/:ID", func(ctx *gin.Context) {
+		task := ctx.Params.ByName("ID")
+		pos := -1
+		for i, todo := range todos {
+			if todo.Id == task {
+				pos = i
+				break
+			}
+		}
+		if pos == -1 {
+			ctx.JSON(http.StatusNotFound, gin.H{
+				"message": "Task not Found",
+			})
+		} else {
+			todos = slices.Delete(todos, pos, pos+1)
+			ctx.JSON(200, gin.H{
+				"message": "Task deleted successfully",
+				"tasks":   todos,
 			})
 		}
 	})
