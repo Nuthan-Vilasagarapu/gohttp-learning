@@ -1,18 +1,22 @@
 package main
 
-import "net/http"
-
-func FormHandler(res http.ResponseWriter, req *http.Request) {
-	name := req.FormValue("s_name")
-	message := name + ", thank you filling this form!"
-	res.Write([]byte(message))
-}
+import (
+	"github.com/gin-gonic/gin"
+)
 
 func main() {
-	http.Handle("/", http.FileServer(http.Dir(".")))
-	http.HandleFunc("/form", FormHandler)
-	http.ListenAndServe(
-		":8000",
-		nil,
-	)
+	router := gin.Default()
+
+	router.GET("/", func(c *gin.Context) {
+		c.File("./index.html")
+	})
+
+	router.POST("/form", func(c *gin.Context) {
+		name := c.Request.FormValue("s_name")
+		c.JSON(200, gin.H{
+			"message": "Thank you " + name + ", for filling this form",
+		})
+	})
+
+	router.Run(":8000")
 }
